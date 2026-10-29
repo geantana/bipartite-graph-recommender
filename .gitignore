@@ -1,0 +1,29 @@
+# Compiled program and build output
+bipartite_recommender
+a
+*.o
+*.out
+*.exe
+*.dSYM/
+build/
+bin/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+
+# MovieLens data is not redistributed here: download it with scripts/download_data.sh
+data/interactions.txt
+data/u.data
+ml-100k/
+
+# IDE and OS files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Archives
+*.zip
+*.tar.gz
