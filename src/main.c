@@ -240,13 +240,17 @@ void resetRecommendations() {
 // INSTRUCTION #1
 // A function to recommend the given user with required number of random movies
 void recommendRandom(int userID) {
-    srand(time(NULL));
     // Set the recommendations -1
     resetRecommendations();
-    // Fill the array with desired number of movies
-    for(int i = 0; i < MAX_RECOMMEND; ) {
+    // Fill the array with the desired number of distinct movies the user has not seen
+    // The number of draws is limited so that a user who has seen almost every movie cannot cause an endless loop
+    for(int i = 0, draws = 0; i < MAX_RECOMMEND && draws < 100000; draws++) {
         int movieID = rand() % MAX_MOVIES + 1;
-        if (!hasWatched(userID, movieID)) {
+        int alreadyChosen = 0;
+        for(int k = 0; k < i; k++) {
+            if (recommendations[k] == movieID) alreadyChosen = 1;
+        }
+        if (!hasWatched(userID, movieID) && !alreadyChosen) {
             recommendations[i] = movieID;
             i++;
         }
@@ -573,7 +577,6 @@ int recommendFromSimilar(int targetUserID) {
 // An even step number means arriving to a user
 // An odd step number means arriving to a movie
 int goToRandom(int targetUserID, int step) {
-    srand(time(NULL));
     int randomMovie = 0, randomUser = 0;
     int rating = 0, ratingSum = 0;
     int currentUser = targetUserID;
@@ -647,6 +650,8 @@ void printRecommendations() {
 // mode 4 : RECOMMENDATIONS FROM THE USER WITH CLOSEST WEIGHTED DISTANCE
 // mode 5 : RECOMMENDATIONS FROM THE USER WITH WHOM THE TASTE IS MOST SIMILAR
 void doRecommend(int user, int mode) {
+    // Start every request with an empty list, so results of a previous method can never be shown again
+    resetRecommendations();
     switch (mode) {
         case 1:
             // RANDOM RECOMMENDATIONS FOR SELECTED USER
@@ -668,6 +673,10 @@ void doRecommend(int user, int mode) {
             printf("\n\n*********** FROM SIMILAR USER RECOMMENDATIONS ***********");
             printf("\n***********  (Based on common movie number)   ***********\n\n");
             int mostCommoner = recommendFromCommonUser(user - 1);
+            if (mostCommoner == -1) {
+                printf(" User %d shares no movies with any other user, so there is nothing to recommend.\n", user);
+                break;
+            }
             printf(" The User with whom the User %d shares most movies is User %d\n\n", user, mostCommoner + 1);
             printf(" Highest rated movies from the USER %d : \n", mostCommoner + 1);
             printRecommendations();
@@ -684,6 +693,10 @@ void doRecommend(int user, int mode) {
             printf("\n\n*********** FROM SIMILAR USER RECOMMENDATIONS ***********");
             printf("\n***********  (Based on common movie ratings)  ***********\n\n");
             int mostSimilar = recommendFromSimilar(user - 1);
+            if (mostSimilar == -1) {
+                printf(" No other user shares at least %d movies with User %d, so there is nothing to recommend.\n", MIN_COMMON, user);
+                break;
+            }
             printf(" The most similar user to User %d based on movie ratings is User %d\n\n", user, mostSimilar + 1);
             printf(" Highest rated movies from the USER %d : \n", mostSimilar + 1);
             printRecommendations();
@@ -779,6 +792,7 @@ void callMenu() {
 int main() {
 
     // PREPARATION BEFORE RECOMMENDATIONS
+    srand((unsigned)time(NULL));    // Seeded once; seeding again on every call repeats the same numbers within a second
     initializeUsers();
     loadInteractions("interactions.txt");
 
