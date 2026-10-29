@@ -396,126 +396,67 @@ int getRating(int userID, int movieID) {
     return current->rating;
 }
 
-// A utility function to find the movie with minimum distance
-int extractMin(MovieNode movies[], int size, int visited[]) {
-    int minIndex = -1;
-    int minDistance = INT_MAX;
-
-    for (int i = 0; i < size; i++) {
-        // Find the closest non-visited node
-        // The placeholder ID (-1) must be checked first, otherwise visited[-1] is read
-        if (movies[i].movieID != -1 && !visited[movies[i].movieID] && movies[i].rating < minDistance) {
-            minDistance = movies[i].rating;
-            minIndex = i;
-        }
-    }
-    // Return the index
-    return minIndex;
-}
-// A utility function to find the user with minimum distance
-int getMin(int userList[], int size, int visited[]) {
+// A utility function to find the unvisited node with the smallest distance in a list of distances
+// Nodes that have not been reached yet (INT_MAX) are ignored, -1 is returned if there is no such node
+int getMin(int distanceList[], int size, int visited[]) {
     int minIndex = -1;
     int minDistance = INT_MAX;
     for(int i = 0; i < size; i++) {
-        if(!visited[i] && userList[i] < minDistance) {
-            minDistance = userList[i];
+        if(!visited[i] && distanceList[i] < minDistance) {
+            minDistance = distanceList[i];
             minIndex = i;
         }
     }
     return minIndex;
 }
-// See if visiting of all the movies is done
-int isVisitingDone(int visited[], int size) {
-    for (int i = 1; i < size; i++) {
-        if (!visited[i]) {
-            return 0; // Visiting not done
-        }
-    }
-    return 1; // All movies visited
-}
-// Dijkstra Algorithm to recommend the closest weighted movies
+// Dijkstra's algorithm to recommend the closest weighted movies
+// The weight of an edge is the rating, so the weighted distance between two nodes is the smallest sum of the
+// ratings along a path between them. Users and movies take turns on a path, because the graph is bipartite.
+// The search only stops when no reachable node is left, so the distance to every movie is exact.
 void findClosestMovies(int userID) {
-    MovieNode distances[MAX_MOVIES + 1]; // Movie distances
-    int userDistances[MAX_USERS];
-    int visited[MAX_MOVIES + 1] = {0}; // To mark visited movies
-    int visitedUsers[MAX_USERS] = {0}; // To mark visited users
+    int userDistances[MAX_USERS];           // Shortest distance from the given user to every user
+    int movieDistances[MOVIE_SLOTS];        // Shortest distance from the given user to every movie (indexed by movie ID)
+    int visitedUsers[MAX_USERS] = {0};      // To mark visited users
+    int visitedMovies[MOVIE_SLOTS] = {0};   // To mark visited movies
 
-    // Initialize all movie distances to INT_MAX
-    for(int i = 0; i < MAX_MOVIES + 1; i++) {
-        distances[i].distance = INT_MAX;
-        distances[i].movieID = -1;
-    }
+    // Initialize all distances to INT_MAX (not reached), except the distance of the given user to themselves
+    for(int i = 0; i < MAX_USERS; i++) userDistances[i] = INT_MAX;
+    for(int i = 0; i < MOVIE_SLOTS; i++) movieDistances[i] = INT_MAX;
+    userDistances[userID] = 0;
 
-    // Initialize all user distances besides the userID to INT_MAX
-    for(int i = 0; i < MAX_USERS; i++) {
-        if(i == userID) {
-            userDistances[i] = 0;
-            continue;
-        }
-        userDistances[i] = INT_MAX;
-    }
-
-
-    int currentUser = userID;
-    int currentMovie = -1;
-    int mode = 0;               // To change modes between a user process and a movie process
-    visitedUsers[currentUser] = 1;
-    // !isVisitingDone(visited, MAX_MOVIES + 1);
-    int iterationNum = 700;     // Number of iterations in graph traversal
-    while(iterationNum != 0) {
-        if(mode == 0) {
-            // If we are currently at a user
-            MovieNode userMovies[MAX_MOVIES + 1];
-            fillUserMovies(userMovies, currentUser);
-            for(int i = 0; i < MAX_MOVIES + 1; i++) {
-                if(userMovies[i].movieID != -1) {
-                    int movieID = userMovies[i].movieID;
-                    int distance = userMovies[i].rating + userDistances[currentUser];
-                    // To see the accumulated distance up until a certain user and thus the total distance to
-                    // users movies, UNCOMMENT BELOW 5 **
-                    // printf("\nFor Movie: %d\nRating: %d\nDistance accumulated: %d\nThus the total distance: %d\n",
-                    //     movieID, userMovies[i].rating, userDistances[currentUser], distance);
-                    if(distance < distances[movieID].distance) {
-                        distances[movieID].distance = distance;
-                        distances[movieID].movieID = movieID;
-                        // To see the IDs and the total distances of the movies that are being updated, UNCOMMENT BELOW 6
-                        // printf("Movie ID: %d, Distance: %d\n", distances[movieID].movieID, distances[movieID].distance);
-                    }
+    while(1) {
+        // The next node is the closest node that is not visited yet, whether it is a user or a movie
+        int nextUser = getMin(userDistances, MAX_USERS, visitedUsers);
+        int nextMovie = getMin(movieDistances, MOVIE_SLOTS, visitedMovies);
+        if(nextUser == -1 && nextMovie == -1) break;        // Nothing reachable is left
+        if(nextMovie == -1 || (nextUser != -1 && userDistances[nextUser] <= movieDistances[nextMovie])) {
+            // If we are currently at a user, all of their movies can be reached through them
+            visitedUsers[nextUser] = 1;
+            // To see the users visited in the traversal, UNCOMMENT BELOW 7
+            // printf("\nVisiting User %d at distance %d\n", nextUser + 1, userDistances[nextUser]);
+            for(MovieNode *current = users[nextUser].movies; current; current = current->next) {
+                int distance = current->rating + userDistances[nextUser];
+                // To see the accumulated distance up until a certain user and thus the total distance to
+                // users movies, UNCOMMENT BELOW 5 **
+                // printf("\nFor Movie: %d\nRating: %d\nDistance accumulated: %d\nThus the total distance: %d\n",
+                //     current->movieID, current->rating, userDistances[nextUser], distance);
+                if(distance < movieDistances[current->movieID]) {
+                    movieDistances[current->movieID] = distance;
+                    // To see the IDs and the total distances of the movies that are being updated, UNCOMMENT BELOW 6
+                    // printf("Movie ID: %d, Distance: %d\n", current->movieID, distance);
                 }
             }
-            int minIndex = extractMin(userMovies, MAX_MOVIES + 1, visited);
-            // This user has no unvisited movie left, so the traversal cannot continue
-            if(minIndex == -1) break;
-            int movieID = userMovies[minIndex].movieID;
-            visited[movieID] = 1;
-            currentMovie = movieID;
-            mode = 1;
         } else {
-            // If we are currently at a movie
+            // If we are currently at a movie, all users who rated it can be reached through it
+            visitedMovies[nextMovie] = 1;
             for(int i = 0; i < MAX_USERS; i++) {
-                if(hasWatched(i, currentMovie) && !visitedUsers[i]) {
-                    int rating = getRating(i, currentMovie);
-                    int currentDistance = distances[currentMovie].distance + rating;
-                    if (currentDistance < userDistances[i]) {
-                        userDistances[i] = currentDistance;
-                    }
+                if(visitedUsers[i]) continue;
+                int rating = getRating(i, nextMovie);
+                if(rating != INT_MIN && movieDistances[nextMovie] + rating < userDistances[i]) {
+                    userDistances[i] = movieDistances[nextMovie] + rating;
                 }
             }
-            int minIndex = getMin(userDistances, MAX_USERS, visitedUsers);
-            if(minIndex == -1) {
-                // Dead end: no unvisited user can be reached through this movie (for example nobody else rated it).
-                // Stay at the current user and try another one of their movies.
-                mode = 0;
-                iterationNum--;
-                continue;
-            }
-            visitedUsers[minIndex] = 1;
-            // To see the user changes in the traversal, UNCOMMENT BELOW 7
-            // printf("\nChanging user from %d to User %d\n", currentUser + 1, minIndex + 1);
-            currentUser = minIndex;
-            mode = 0;
         }
-        iterationNum--;
     }
 
     // To see all user distances to source user, UNCOMMENT BELOW 8
@@ -523,23 +464,40 @@ void findClosestMovies(int userID) {
     //     printf("Distance from User %d to User %d is %d\n", userID + 1, i + 1, userDistances[i]);
     // }
 
-    // Sort by distance in ascending order
-    sort(distances, 7);
+    // Rank the movies by distance. Ratings are small whole numbers, so many movies share the same distance:
+    // movies at the same distance are ordered by degree (the most linked one first) and then by movie ID.
+    // sort() is stable, so sorting by degree first and by distance second gives exactly this order.
+    MovieNode ranking[MOVIE_SLOTS];
+    for(int i = 0; i < MOVIE_SLOTS; i++) {
+        ranking[i].movieID = (i == 0 || movieDistances[i] == INT_MAX) ? -1 : i;    // -1: no such movie or not reachable
+        ranking[i].rating = 0;
+        ranking[i].degree = 0;
+        ranking[i].distance = movieDistances[i];
+        ranking[i].next = NULL;
+    }
+    for(int i = 0; i < MAX_USERS; i++) {
+        for(MovieNode *current = users[i].movies; current; current = current->next) {
+            ranking[current->movieID].degree++;
+        }
+    }
+    sort(ranking, 2);       // Most linked first
+    sort(ranking, 7);       // Closest first, equal distances stay in the order above
+
     // To see all calculated distances to movies that the target user did not watch, UNCOMMENT BELOW 9
-    // for (int i = 0; i < MAX_MOVIES + 1; i++) {
-    //     if(!hasWatched(userID, distances[i].movieID) && distances[i].distance < INT_MAX) {
+    // for (int i = 0; i < MOVIE_SLOTS; i++) {
+    //     if(!hasWatched(userID, ranking[i].movieID) && ranking[i].distance < INT_MAX) {
     //         printf("The distance from User %d to Movie %d is %d\n",
-    //             userID + 1, distances[i].movieID, distances[i].distance);
+    //             userID + 1, ranking[i].movieID, ranking[i].distance);
     //     }
     // }
 
     for(int i = 0, j = 0; j < MAX_RECOMMEND && i < MOVIE_SLOTS; i++) {
-        if(!hasWatched(userID, distances[i].movieID)) {
-            recommendations[j] = distances[i].movieID;
+        if(!hasWatched(userID, ranking[i].movieID)) {
+            recommendations[j] = ranking[i].movieID;
             j++;
             // To see the distances of the movies that are being recommended, UNCOMMENT BELOW 10
             // printf(" The distance of the movie %d from User %d is %d.\n",
-            //     distances[i].movieID, userID + 1, distances[i].distance);
+            //     ranking[i].movieID, userID + 1, ranking[i].distance);
         }
     }
 
