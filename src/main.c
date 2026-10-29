@@ -149,7 +149,11 @@ int totalUsers = 0;
 
 // Add a movie to a user's watched list
 void addMovie(int userID, int movieID, int rating) {
-    MovieNode *newMovie = (MovieNode *)malloc(sizeof(MovieNode));
+    MovieNode *newMovie = (MovieNode *)calloc(1, sizeof(MovieNode));    // calloc: degree and distance start at 0
+    if (!newMovie) {
+        fprintf(stderr, "Error: out of memory\n");
+        exit(EXIT_FAILURE);
+    }
     newMovie->movieID = movieID;
     newMovie->rating = rating;
     newMovie->next = users[userID].movies;
@@ -170,6 +174,19 @@ int hasWatched(int userID, int movieID) {
 void initializeUsers() {
     for (int i = 0; i < MAX_USERS; i++) {
         users[i].userID = i;
+        users[i].movies = NULL;
+    }
+}
+
+// Release the linked lists of all users
+void freeUsers(void) {
+    for (int i = 0; i < MAX_USERS; i++) {
+        MovieNode *current = users[i].movies;
+        while (current) {
+            MovieNode *next = current->next;
+            free(current);
+            current = next;
+        }
         users[i].movies = NULL;
     }
 }
@@ -195,15 +212,28 @@ void loadInteractions(const char *filename) {
     }
 
     char line[256];
+    int loaded = 0, skipped = 0;
     while (fgets(line, sizeof(line), file)) {
         int userID, movieID, rating;
         if (sscanf(line, "%d %d %d", &userID, &movieID, &rating) == 3) {
+            // IDs outside the configured catalog, ratings outside 1 - 5 and repeated (user, movie) pairs are skipped
+            if (userID < 1 || userID > MAX_USERS || movieID < 1 || movieID > MAX_MOVIES
+                    || rating < 1 || rating > 5 || hasWatched(userID - 1, movieID)) {
+                skipped++;
+                continue;
+            }
             addMovie(userID - 1, movieID, rating);  // Adjusting userID to 0-based index ! ! !
             if (userID > totalUsers) totalUsers = userID;   // Keep the total number of users in case it is needed
+            loaded++;
         }
     }
 
     fclose(file);
+    if (skipped > 0) fprintf(stderr, "Warning: skipped %d invalid or repeated line(s) in %s\n", skipped, filename);
+    if (loaded == 0) {
+        fprintf(stderr, "Error: no valid interactions found in %s\n", filename);
+        exit(EXIT_FAILURE);
+    }
 }
 
 // Fills the given MovieNode array with the given user's movies and their ratings from that user
@@ -789,12 +819,13 @@ void callMenu() {
     printf("\nGOODBYE!!\n");
 }
 
-int main() {
+int main(int argc, char *argv[]) {
 
     // PREPARATION BEFORE RECOMMENDATIONS
     srand((unsigned)time(NULL));    // Seeded once; seeding again on every call repeats the same numbers within a second
     initializeUsers();
-    loadInteractions("interactions.txt");
+    // The data file can be given as an argument (for example the MovieLens u.data), the default is interactions.txt
+    loadInteractions(argc > 1 ? argv[1] : "interactions.txt");
 
     // Call menu to use an interactive interface to see recommendations
     callMenu();
@@ -819,6 +850,7 @@ int main() {
     // // ADDITIONAL RANDOM WALK PATHS OF DESIRED STEPS FROM GIVEN USER
     // goToRandom(USER - 1, STEPS);
 
+    freeUsers();
     printf("\n\n");
     return 0;
 }
