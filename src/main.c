@@ -630,9 +630,8 @@ int goToRandom(int targetUserID, int step) {
                 printf(" Total weighted distance is thus %d.\n", ratingSum);
                 mode = 1; i++;
             }
-        }
-        if (mode == 1) {
-            randomUser = rand() % MAX_USERS + 1;
+        } else {
+            randomUser = rand() % MAX_USERS;    // A 0-based index like every other user index
             if(hasWatched(randomUser, randomMovie)) {
                 currentUser = randomUser;
                 MovieNode *current = users[currentUser].movies;
