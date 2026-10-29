@@ -3,6 +3,7 @@
 #include <time.h>
 #include <math.h>
 #include <limits.h>
+#include <string.h>
 
 #define USER 216            // The user for whom the recommendations will be made
 #define MAX_USERS 943       // 943 users
@@ -693,27 +694,48 @@ void doRecommend(int user, int mode) {
 }
 
 // Basic menu utility functions
-int getUserID() {
+// Reads one whole line from the standard input and converts it to an integer
+// Returns 1 if a valid integer was read, 0 if the line is not a valid integer, -1 at the end of the input
+int readInt(int *value) {
+    char line[64];
+    if (!fgets(line, sizeof(line), stdin)) return -1;
+    // A line that does not fit in the buffer is discarded completely and counted as invalid
+    if (!strchr(line, '\n') && !feof(stdin)) {
+        int c;
+        while ((c = getchar()) != '\n' && c != EOF) { }
+        return 0;
+    }
+    char *end;
+    long number = strtol(line, &end, 10);
+    if (end == line) return 0;                      // No digits at all
+    while (*end == ' ' || *end == '\t' || *end == '\r' || *end == '\n') end++;
+    if (*end != '\0' || number < INT_MIN || number > INT_MAX) return 0;     // Extra characters or out of range
+    *value = (int)number;
+    return 1;
+}
+// Asks for a user ID until a valid one is given, returns -1 at the end of the input
+int getUserID(void) {
     int user = -1;
     printf("\n Please enter the user ID (1 - %d) for whom you would like to have recommendations: ", MAX_USERS);
-    scanf("%d", &user);
-    while (user < 1 || user > MAX_USERS) {
+    int status = readInt(&user);
+    while (status != -1 && (status == 0 || user < 1 || user > MAX_USERS)) {
         printf("\n That's not a valid user ID! \n\n");
         printf("Please enter a valid user ID (1 - %d): ", MAX_USERS);
-        scanf("%d", &user);
+        status = readInt(&user);
     }
-    return user;
+    return status == -1 ? -1 : user;
 }
-int getMode() {
+// Asks for a menu choice until a valid one is given, returns -1 (QUIT) at the end of the input
+int getMode(void) {
     int mode = -1;
     printf("\n Please enter your choice: ");
-    scanf("%d", &mode);
-    while (mode < -1 || mode > 5) {
+    int status = readInt(&mode);
+    while (status != -1 && (status == 0 || mode < -1 || mode > 5)) {
         printf("\n That's not a valid choice! \n\n");
         printf("Please enter a valid one: ");
-        scanf("%d", &mode);
+        status = readInt(&mode);
     }
-    return mode;
+    return status == -1 ? -1 : mode;
 }
 void printChoices() {
     printf(" -1 : QUIT\n");
@@ -733,6 +755,10 @@ void callMenu() {
         switch (mode) {
             case 0:
                 user = getUserID();
+                if (user == -1) {       // End of input
+                    mode = -1;
+                    break;
+                }
                 printf("\n OK!, now we can see the algorithms:\n\n");
                 printChoices();
                 mode = getMode();
