@@ -8,6 +8,7 @@
 #define USER 216            // The user for whom the recommendations will be made
 #define MAX_USERS 943       // 943 users
 #define MAX_MOVIES 1682     // 1682 movies
+#define MOVIE_SLOTS (MAX_MOVIES + 1)    // Movie IDs start from 1, so arrays indexed by movie ID need MAX_MOVIES + 1 slots
 #define MAX_RECOMMEND 5     // Maximum number of recommendations
 #define MIN_COMMON 20       // Number of minimum common movies required to say a pair is similar in recommendFromSimilar
 #define STEPS 11            // Number of steps to take in a randomized walk (odd number to arrive a movie)
@@ -36,8 +37,8 @@ void sort(MovieNode arr[], int mode) {
     switch(mode) {
         // Ascending by degree
         case 1:
-            for (int i = 0; i < MAX_MOVIES - 1; i++) {
-                for (int j = 0; j < MAX_MOVIES - i - 1; j++) {
+            for (int i = 0; i < MOVIE_SLOTS - 1; i++) {
+                for (int j = 0; j < MOVIE_SLOTS - i - 1; j++) {
                     if (arr[j].degree > arr[j + 1].degree) {
                         // Swap the elements
                         MovieNode temp = arr[j];
@@ -49,8 +50,8 @@ void sort(MovieNode arr[], int mode) {
         break;
         // Descending by degree
         case 2:
-            for (int i = 0; i < MAX_MOVIES - 1; i++) {
-                for (int j = 0; j < MAX_MOVIES - i - 1; j++) {
+            for (int i = 0; i < MOVIE_SLOTS - 1; i++) {
+                for (int j = 0; j < MOVIE_SLOTS - i - 1; j++) {
                     if (arr[j].degree < arr[j + 1].degree) {
                         // Swap the elements
                         MovieNode temp = arr[j];
@@ -62,8 +63,8 @@ void sort(MovieNode arr[], int mode) {
         break;
         // Ascending by rating
         case 3:
-            for (int i = 0; i < MAX_MOVIES - 1; i++) {
-                for (int j = 0; j < MAX_MOVIES - i - 1; j++) {
+            for (int i = 0; i < MOVIE_SLOTS - 1; i++) {
+                for (int j = 0; j < MOVIE_SLOTS - i - 1; j++) {
                     if (arr[j].rating > arr[j + 1].rating) {
                         // Swap the elements
                         MovieNode temp = arr[j];
@@ -75,8 +76,8 @@ void sort(MovieNode arr[], int mode) {
         break;
         // Descending by rating
         case 4:
-            for (int i = 0; i < MAX_MOVIES - 1; i++) {
-                for (int j = 0; j < MAX_MOVIES - i - 1; j++) {
+            for (int i = 0; i < MOVIE_SLOTS - 1; i++) {
+                for (int j = 0; j < MOVIE_SLOTS - i - 1; j++) {
                     if (arr[j].rating < arr[j + 1].rating) {
                         // Swap the elements
                         MovieNode temp = arr[j];
@@ -88,8 +89,8 @@ void sort(MovieNode arr[], int mode) {
         break;
         // Ascending by movieID
         case 5:
-            for (int i = 0; i < MAX_MOVIES - 1; i++) {
-                for (int j = 0; j < MAX_MOVIES - i - 1; j++) {
+            for (int i = 0; i < MOVIE_SLOTS - 1; i++) {
+                for (int j = 0; j < MOVIE_SLOTS - i - 1; j++) {
                     if (arr[j].movieID > arr[j + 1].movieID) {
                         // Swap the elements
                         MovieNode temp = arr[j];
@@ -101,8 +102,8 @@ void sort(MovieNode arr[], int mode) {
         break;
         // Descending by movieID
         case 6:
-            for (int i = 0; i < MAX_MOVIES - 1; i++) {
-                for (int j = 0; j < MAX_MOVIES - i - 1; j++) {
+            for (int i = 0; i < MOVIE_SLOTS - 1; i++) {
+                for (int j = 0; j < MOVIE_SLOTS - i - 1; j++) {
                     if (arr[j].movieID < arr[j + 1].movieID) {
                         // Swap the elements
                         MovieNode temp = arr[j];
@@ -114,8 +115,8 @@ void sort(MovieNode arr[], int mode) {
         break;
         // Ascending by distance
         case 7:
-            for (int i = 0; i < MAX_MOVIES - 1; i++) {
-                for (int j = 0; j < MAX_MOVIES - i - 1; j++) {
+            for (int i = 0; i < MOVIE_SLOTS - 1; i++) {
+                for (int j = 0; j < MOVIE_SLOTS - i - 1; j++) {
                     if (arr[j].distance > arr[j + 1].distance) {
                         // Swap the elements
                         MovieNode temp = arr[j];
@@ -127,8 +128,8 @@ void sort(MovieNode arr[], int mode) {
         break;
         // Descending by distance
         case 8:
-            for (int i = 0; i < MAX_MOVIES - 1; i++) {
-                for (int j = 0; j < MAX_MOVIES - i - 1; j++) {
+            for (int i = 0; i < MOVIE_SLOTS - 1; i++) {
+                for (int j = 0; j < MOVIE_SLOTS - i - 1; j++) {
                     if (arr[j].distance < arr[j + 1].distance) {
                         // Swap the elements
                         MovieNode temp = arr[j];
@@ -171,7 +172,7 @@ int hasWatched(int userID, int movieID) {
 }
 
 // Initialize user array
-void initializeUsers() {
+void initializeUsers(void) {
     for (int i = 0; i < MAX_USERS; i++) {
         users[i].userID = i;
         users[i].movies = NULL;
@@ -261,7 +262,7 @@ void fillUserMovies(MovieNode arr[], int userID) {
 // The list is written over with each recommendation algorithm
 int recommendations[MAX_RECOMMEND] = {0};
 // To reset all elements of the array recommendations to -1
-void resetRecommendations() {
+void resetRecommendations(void) {
     for (int i = 0; i < MAX_RECOMMEND; i++) {
         recommendations[i] = -1;
     }
@@ -292,9 +293,9 @@ void recommendRandom(int userID) {
 // Since the movies will be indexed with their own ids at first, the size of the list is MAX_MOVIES + 1
 MovieNode movies[MAX_MOVIES + 1];
 // Calculate movie degrees and fill in the movies array
-void calculateDegrees() {
+void calculateDegrees(void) {
     // Set the list elements to -1
-    for (int i = 0; i < MAX_MOVIES; i++) {
+    for (int i = 0; i < MOVIE_SLOTS; i++) {
         movies[i].degree = 0;
         movies[i].movieID = -1;
     }
@@ -370,7 +371,7 @@ int recommendFromCommonUser(int targetUserID) {
     // Sort the user's (similarUserID's) movies based on the rating in descending order (mode 4)
     sort(user_movies, 4);
     // Fill the recommendations with most rated movies
-    for(int i = 0, j = 0; j < MAX_RECOMMEND && i < MAX_MOVIES; i++) {
+    for(int i = 0, j = 0; j < MAX_RECOMMEND && i < MOVIE_SLOTS; i++) {
         if(!hasWatched(targetUserID, user_movies[i].movieID)) {
             recommendations[j] = user_movies[i].movieID;
             j++;
@@ -532,7 +533,7 @@ void findClosestMovies(int userID) {
     //     }
     // }
 
-    for(int i = 0, j = 0; j < MAX_RECOMMEND && i < MAX_MOVIES; i++) {
+    for(int i = 0, j = 0; j < MAX_RECOMMEND && i < MOVIE_SLOTS; i++) {
         if(!hasWatched(userID, distances[i].movieID)) {
             recommendations[j] = distances[i].movieID;
             j++;
@@ -591,7 +592,7 @@ int recommendFromSimilar(int targetUserID) {
     // Sort mostSimilarUser's movies by rating in descending order
     sort(user_movies, 4);
     // Fill the recommendations with most rated movies
-    for(int i = 0, j = 0; j < MAX_RECOMMEND && i < MAX_MOVIES; i++) {
+    for(int i = 0, j = 0; j < MAX_RECOMMEND && i < MOVIE_SLOTS; i++) {
         if(!hasWatched(targetUserID, user_movies[i].movieID)) {
             recommendations[j] = user_movies[i].movieID;
             j++;
@@ -662,7 +663,7 @@ int goToRandom(int targetUserID, int step) {
     return -1;
 }
 
-void printRecommendations() {
+void printRecommendations(void) {
     printf("\n");
     for (int i = 0; i < MAX_RECOMMEND; i++) {
         if (recommendations[i] != -1) {
@@ -780,7 +781,7 @@ int getMode(void) {
     }
     return status == -1 ? -1 : mode;
 }
-void printChoices() {
+void printChoices(void) {
     printf(" -1 : QUIT\n");
     printf("  0 : CHANGE USER ID\n");
     printf("  1 : RANDOM RECOMMENDATIONS FOR SELECTED USER\n");
@@ -789,7 +790,7 @@ void printChoices() {
     printf("  4 : RECOMMENDATIONS FROM THE USER WITH CLOSEST WEIGHTED DISTANCE\n");
     printf("  5 : RECOMMENDATIONS FROM THE USER WITH WHOM THE TASTE IS MOST SIMILAR\n");
 }
-void callMenu() {
+void callMenu(void) {
     printf("\n Hello Dear User,\n");
     printf(" We offer a few recommendation algorithms for you,\n");
     printf(" Before diving into the algorithms, lets pick a user");
