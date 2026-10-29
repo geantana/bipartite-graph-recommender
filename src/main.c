@@ -367,7 +367,8 @@ int extractMin(MovieNode movies[], int size, int visited[]) {
 
     for (int i = 0; i < size; i++) {
         // Find the closest non-visited node
-        if (!visited[movies[i].movieID] && movies[i].rating < minDistance && movies[i].movieID != -1) {
+        // The placeholder ID (-1) must be checked first, otherwise visited[-1] is read
+        if (movies[i].movieID != -1 && !visited[movies[i].movieID] && movies[i].rating < minDistance) {
             minDistance = movies[i].rating;
             minIndex = i;
         }
@@ -446,7 +447,9 @@ void findClosestMovies(int userID) {
                     }
                 }
             }
-            int minIndex = extractMin(userMovies, MAX_USERS, visited);
+            int minIndex = extractMin(userMovies, MAX_MOVIES + 1, visited);
+            // This user has no unvisited movie left, so the traversal cannot continue
+            if(minIndex == -1) break;
             int movieID = userMovies[minIndex].movieID;
             visited[movieID] = 1;
             currentMovie = movieID;
@@ -463,6 +466,13 @@ void findClosestMovies(int userID) {
                 }
             }
             int minIndex = getMin(userDistances, MAX_USERS, visitedUsers);
+            if(minIndex == -1) {
+                // Dead end: no unvisited user can be reached through this movie (for example nobody else rated it).
+                // Stay at the current user and try another one of their movies.
+                mode = 0;
+                iterationNum--;
+                continue;
+            }
             visitedUsers[minIndex] = 1;
             // To see the user changes in the traversal, UNCOMMENT BELOW 7
             // printf("\nChanging user from %d to User %d\n", currentUser + 1, minIndex + 1);
